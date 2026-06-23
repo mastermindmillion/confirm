@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Mastermind Million — Confirmación de Asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#000000;
+    --gold:#D4A362;
+    --gold-deep:#B17F40;
+    --gold-light:#E8D9AE;
+    --white:#F5F5F3;
+    --text-muted:#8A8A86;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Montserrat',sans-serif;
+    background:#000000;
+    color:var(--white);
+    overflow:hidden;
+    overscroll-behavior:none;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+
+  .progress-track{
+    position:fixed;
+    top:0; left:0;
+    width:100%;
+    height:4px;
+    background:rgba(212,163,98,0.12);
+    z-index:50;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--gold-deep), var(--gold-light));
+    transition:width .45s cubic-bezier(.65,0,.35,1);
+  }
+
+  .step-counter{
+    position:fixed;
+    top:calc(18px + env(safe-area-inset-top));
+    right:calc(22px + env(safe-area-inset-right));
+    font-size:11px;
+    letter-spacing:0.15em;
+    color:var(--text-muted);
+    z-index:50;
+  }
+  .step-counter span{color:var(--gold);}
+
+  .logo-fixed{
+    position:fixed;
+    top:calc(18px + env(safe-area-inset-top));
+    left:calc(22px + env(safe-area-inset-left));
+    z-index:50;
+  }
+  .logo-fixed svg{width:40px;height:auto;opacity:0.9;}
+
+  .stage{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+  }
+
+  .screen{
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:84px 24px calc(50px + env(safe-area-inset-bottom));
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(18px);
+    transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .screen.active{
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+    pointer-events:auto;
+  }
+  .screen.leaving{
+    opacity:0;
+    transform:translateY(-18px);
+  }
+
+  .screen-inner{
+    width:100%;
+    max-width:560px;
+    text-align:center;
+    margin:auto;
+  }
+
+  .screen[data-screen="q"] .screen-inner{
+    text-align:left;
+  }
+  .screen[data-screen="q"] .q-input,
+  .screen[data-screen="q"] .q-select{
+    text-align:left;
+    text-align-last:left;
+  }
+  .screen[data-screen="q"] .pill-grid{
+    justify-content:flex-start;
+  }
+  .screen[data-screen="q"] .nav-row{
+    justify-content:flex-start;
+  }
+  .screen[data-screen="q"] .q-error{
+    text-align:left;
+  }
+  .screen[data-screen="q"] .q-code,
+  .screen[data-screen="q"] .q-code-custom{
+    text-align:center;
+    text-align-last:center;
+  }
+  .screen[data-screen="q"] .hint-key{
+    text-align:left;
+  }
+
+  .welcome-logo svg{width:280px;max-width:75vw;height:auto;filter:drop-shadow(0 0 18px rgba(212,163,98,0.25));margin-bottom:30px;}
+  .exclusive-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    border:1px solid rgba(212,163,98,0.4);
+    border-radius:30px;
+    padding:9px 20px;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:26px;
+  }
+  .exclusive-tag::before{
+    content:"";
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 8px var(--gold);
+  }
+  .welcome-title{
+    font-family:'Poppins',sans-serif;
+    font-weight:500;
+    font-size:30px;
+    line-height:1.35;
+    background:linear-gradient(120deg, var(--gold-deep) 0%, var(--gold-light) 50%, var(--gold) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    margin-bottom:18px;
+  }
+  .welcome-text{
+    font-size:14.5px;
+    color:var(--text-muted);
+    line-height:1.8;
+    max-width:440px;
+    margin:0 auto 38px;
+  }
+  .welcome-text strong{color:var(--gold-light);font-weight:500;}
+
+  .q-eyebrow{
+    font-size:11px;
+    letter-spacing:0.25em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:16px;
+  }
+  .q-title{
+    font-family:'Poppins',sans-serif;
+    font-weight:500;
+    font-size:24px;
+    color:var(--white);
+    line-height:1.4;
+    margin-bottom:8px;
+  }
+  .q-title .req{color:var(--gold);}
+  .q-sub{
+    font-size:13px;
+    color:var(--text-muted);
+    margin-bottom:34px;
+    line-height:1.6;
+  }
+
+  .q-input{
+    width:100%;
+    background:transparent;
+    border:none;
+    border-bottom:1.5px solid rgba(212,163,98,0.3);
+    padding:14px 4px;
+    color:var(--white);
+    font-family:'Montserrat',sans-serif;
+    font-size:18px;
+    text-align:center;
+    transition:border-color .25s;
+  }
+  .q-input::placeholder{color:#5A5A5A;}
+  .q-input:focus{outline:none;border-color:var(--gold);}
+
+  textarea.q-input{
+    text-align:left;
+    resize:vertical;
+    min-height:70px;
+    font-size:16px;
+    border:1px solid rgba(212,163,98,0.3);
+    border-radius:4px;
+    padding:14px;
+  }
+  textarea.q-input:focus{border-color:var(--gold);}
+
+  .q-select{
+    width:100%;
+    background:#000;
+    border:none;
+    border-bottom:1.5px solid rgba(212,163,98,0.3);
+    padding:14px 4px;
+    color:var(--white);
+    font-family:'Montserrat',sans-serif;
+    font-size:17px;
+    text-align:center;
+    text-align-last:center;
+    transition:border-color .25s;
+    appearance:none;
+    -webkit-appearance:none;
+    border-radius:0;
+    cursor:pointer;
+  }
+  .q-select:focus{outline:none;border-color:var(--gold);}
+  .q-select option{background:#0A0A0A;color:var(--white);}
+
+  .phone-row{
+    display:flex;
+    gap:10px;
+    align-items:stretch;
+  }
+  .phone-row .q-code{
+    flex:0 0 110px;
+    text-align:center;
+    font-size:16px;
+  }
+  .phone-row .q-code-custom{
+    flex:0 0 80px;
+    text-align:center;
+    font-size:16px;
+  }
+  .phone-row .q-input{
+    flex:1;
+  }
+  @media(max-width:480px){
+    .phone-row{flex-direction:column;gap:14px;}
+    .phone-row .q-code{flex:0 0 auto;}
+  }
+
+  .q-error{
+    font-size:12px;
+    color:#E0A56B;
+    margin-top:12px;
+    min-height:16px;
+    opacity:0;
+    transition:opacity .2s;
+  }
+  .q-error.show{opacity:1;}
+
+  .pill-grid{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:12px;
+    margin-top:6px;
+  }
+  .pill-opt{position:relative;}
+  .pill-opt input{position:absolute;opacity:0;width:0;height:0;}
+  .pill-opt span{
+    display:inline-block;
+    padding:13px 22px;
+    min-height:44px;
+    box-sizing:border-box;
+    border:1px solid rgba(212,163,98,0.35);
+    border-radius:30px;
+    font-size:14px;
+    color:var(--white);
+    cursor:pointer;
+    touch-action:manipulation;
+    transition:all .2s;
+    user-select:none;
+  }
+  .pill-opt input:checked + span{
+    border-color:var(--gold);
+    color:var(--black);
+    background:linear-gradient(135deg, var(--gold-deep), var(--gold-light));
+    font-weight:500;
+  }
+  .pill-opt input:focus-visible + span{outline:2px solid var(--gold);outline-offset:2px;}
+
+  .q-conditional{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .35s ease, opacity .3s ease;
+    opacity:0;
+    margin-top:0;
+  }
+  .q-conditional.open{max-height:140px;opacity:1;margin-top:20px;}
+
+  .nav-row{
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    margin-top:38px;
+  }
+  .btn{
+    font-family:'Poppins',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    border-radius:30px;
+    padding:14px 34px;
+    min-height:48px;
+    cursor:pointer;
+    border:none;
+    touch-action:manipulation;
+    transition:filter .2s, transform .15s, box-shadow .2s;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--gold-deep) 0%, var(--gold) 45%, var(--gold-light) 70%, var(--gold) 100%);
+    color:var(--black);
+    box-shadow:0 4px 20px rgba(212,163,98,0.25);
+  }
+  .btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 26px rgba(212,163,98,0.4);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid rgba(255,255,255,0.15);
+  }
+  .btn-ghost:hover{color:var(--white);border-color:rgba(255,255,255,0.3);}
+
+  .hint-key{
+    margin-top:22px;
+    font-size:11px;
+    color:#5A5A5A;
+    letter-spacing:0.05em;
+  }
+  .hint-key kbd{
+    border:1px solid #444;
+    border-radius:3px;
+    padding:1px 6px;
+    font-size:10px;
+    color:var(--text-muted);
+  }
+
+  .success-seal{width:78px;height:78px;margin:0 auto 28px;}
+
+  .confetti-container{
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:5;
+  }
+  .confetti-piece{
+    position:absolute;
+    top:-10%;
+    width:8px;
+    height:16px;
+    opacity:0.9;
+    animation-name:confettiFall;
+    animation-timing-function:cubic-bezier(.25,.46,.45,.94);
+    animation-fill-mode:forwards;
+  }
+  .confetti-piece.ribbon{
+    width:6px;
+    height:22px;
+    border-radius:3px;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) translateX(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(115vh) translateX(var(--drift,0px)) rotate(var(--spin,360deg)); opacity:0; }
+  }
+  .success-title{
+    font-family:'Poppins',sans-serif;
+    font-size:26px;
+    font-weight:500;
+    color:var(--white);
+    margin-bottom:14px;
+  }
+  .success-text{
+    color:var(--text-muted);
+    font-size:14px;
+    line-height:1.8;
+    max-width:420px;
+    margin:0 auto;
+  }
+  .ref-code{
+    margin-top:26px;
+    font-size:11px;
+    letter-spacing:0.2em;
+    color:var(--gold);
+    text-transform:uppercase;
+  }
+
+  .support-block{
+    margin-top:46px;
+    padding-top:30px;
+    border-top:1px solid rgba(212,163,98,0.15);
+  }
+  .support-text{
+    font-size:13px;
+    color:var(--text-muted);
+    margin-bottom:16px;
+  }
+  .btn-support{
+    display:inline-block;
+    text-decoration:none;
+    background:linear-gradient(135deg, var(--gold-deep) 0%, var(--gold) 45%, var(--gold-light) 70%, var(--gold) 100%);
+    color:var(--black);
+    border:none;
+    box-shadow:0 4px 20px rgba(212,163,98,0.25);
+  }
+  .btn-support:hover{
+    filter:brightness(1.08);
+    box-shadow:0 6px 26px rgba(212,163,98,0.4);
+    color:var(--black);
+  }
+
+  @media(max-width:520px){
+    .screen{padding:76px 20px calc(40px + env(safe-area-inset-bottom));}
+    .q-title{font-size:19px;}
+    .q-sub{margin-bottom:26px;}
+    .welcome-title{font-size:22px;}
+    .welcome-text{font-size:13.5px;}
+    .pill-opt span{padding:11px 18px;font-size:13px;}
+    .nav-row{
+      flex-direction:column-reverse;
+      width:100%;
+      gap:10px;
+    }
+    .nav-row .btn{
+      width:100%;
+      padding:14px 20px;
+      font-size:12px;
+    }
+    .support-block{margin-top:36px;padding-top:24px;}
+  }
+
+  @media(max-width:360px){
+    .welcome-logo svg{width:220px;}
+    .q-title{font-size:17px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<div class="logo-fixed" id="logoFixed" style="display:none;">
+  <svg viewBox="787 0 423 491" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M869.276 196.698C871.193 198.323 876.644 204.45 878.708 206.595L904.769 233.937L976.41 307.121C976.316 325.786 976.103 345.25 976.448 363.878C973.656 361.227 970.789 358.093 968.127 355.255C948.548 334.376 926.975 314.45 907.955 293.158C908.497 312.224 908.103 333.1 908.109 352.279L908.118 444.902C908.115 459.886 907.721 475.721 908.075 490.571C895.48 476.865 881.366 463.511 869.073 449.642C869.841 423.939 869.23 395.203 869.237 369.298L869.276 196.698ZM1129.84 196.35C1130.64 197.87 1130.24 424.757 1130.36 449.228C1118 462.918 1104.4 476.649 1091.68 490.101C1092.08 473.653 1091.78 456.553 1091.76 440.058L1091.79 354.712C1091.71 334.105 1091.73 313.502 1091.87 292.896C1070.34 316.429 1046.58 340.299 1024.49 363.468C1024.61 345.318 1025.02 323.843 1024.32 305.848C1034.94 293.848 1048.85 280.198 1060.15 268.478L1129.84 196.35ZM787 0C789.096 1.5823 801.931 15.1225 804.504 17.752L843.193 56.9932L991.408 207.266C991.258 227.17 991.287 247.076 991.485 266.981L838.118 110.303C834.236 106.346 830.391 102.352 826.586 98.3213C827.161 120.246 826.667 144.298 826.662 166.35L826.646 327.322C826.644 353.722 826.018 381.89 826.675 408.107C814.14 394.543 799.171 380.973 787.071 367.478L787 0ZM1208.53 0.544922C1209.26 1.81719 1208.92 66.4617 1208.92 73.2705L1208.97 367.77C1197.93 380.491 1182.56 395.54 1170.66 407.856C1170.95 399.331 1170.69 389.22 1170.68 380.617L1170.67 333.043L1170.63 181.308C1170.61 154.035 1170.15 125.36 1170.77 98.1807C1168.5 101.026 1163.99 105.532 1161.33 108.331L1077.25 195.898C1054.26 219.498 1031.41 243.237 1008.71 267.119C1008.91 247.153 1008.9 227.184 1008.7 207.218C1013.66 201.575 1020.21 195.099 1025.5 189.657L1053.91 160.363L1151.88 59.2969L1185.82 24.2002C1193.28 16.4886 1201.32 8.44461 1208.53 0.544922Z" fill="url(#paint0_mark)"/>
+    <defs>
+      <linearGradient id="paint0_mark" x1="998" y1="0" x2="998" y2="490.571" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#B17F40"/><stop offset="1" stop-color="#DBAA69"/>
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
+<div class="step-counter" id="stepCounter" style="display:none;"></div>
+
+<div class="stage" id="stage">
+
+  <div class="screen active" data-screen="welcome">
+    <div class="screen-inner">
+      <div class="welcome-logo">
+        <svg viewBox="0 0 1996 990" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M869.276 196.698C871.193 198.323 876.644 204.45 878.708 206.595L904.769 233.937L976.41 307.121C976.316 325.786 976.103 345.25 976.448 363.878C973.656 361.227 970.789 358.093 968.127 355.255C948.548 334.376 926.975 314.45 907.955 293.158C908.497 312.224 908.103 333.1 908.109 352.279L908.118 444.902C908.115 459.886 907.721 475.721 908.075 490.571C895.48 476.865 881.366 463.511 869.073 449.642C869.841 423.939 869.23 395.203 869.237 369.298L869.276 196.698ZM1129.84 196.35C1130.64 197.87 1130.24 424.757 1130.36 449.228C1118 462.918 1104.4 476.649 1091.68 490.101C1092.08 473.653 1091.78 456.553 1091.76 440.058L1091.79 354.712C1091.71 334.105 1091.73 313.502 1091.87 292.896C1070.34 316.429 1046.58 340.299 1024.49 363.468C1024.61 345.318 1025.02 323.843 1024.32 305.848C1034.94 293.848 1048.85 280.198 1060.15 268.478L1129.84 196.35ZM787 0C789.096 1.5823 801.931 15.1225 804.504 17.752L843.193 56.9932L991.408 207.266C991.258 227.17 991.287 247.076 991.485 266.981L838.118 110.303C834.236 106.346 830.391 102.352 826.586 98.3213C827.161 120.246 826.667 144.298 826.662 166.35L826.646 327.322C826.644 353.722 826.018 381.89 826.675 408.107C814.14 394.543 799.171 380.973 787.071 367.478L787 0ZM1208.53 0.544922C1209.26 1.81719 1208.92 66.4617 1208.92 73.2705L1208.97 367.77C1197.93 380.491 1182.56 395.54 1170.66 407.856C1170.95 399.331 1170.69 389.22 1170.68 380.617L1170.67 333.043L1170.63 181.308C1170.61 154.035 1170.15 125.36 1170.77 98.1807C1168.5 101.026 1163.99 105.532 1161.33 108.331L1077.25 195.898C1054.26 219.498 1031.41 243.237 1008.71 267.119C1008.91 247.153 1008.9 227.184 1008.7 207.218C1013.66 201.575 1020.21 195.099 1025.5 189.657L1053.91 160.363L1151.88 59.2969L1185.82 24.2002C1193.28 16.4886 1201.32 8.44461 1208.53 0.544922Z" fill="url(#paint0w)"/>
+          <path d="M1858.78 769V594H1910.03C1927.53 594 1942.53 597.167 1955.03 603.5C1967.53 609.833 1977.11 619.25 1983.78 631.75C1990.44 644.083 1993.78 659.417 1993.78 677.75V682.75C1993.78 701.417 1990.36 717.167 1983.53 730C1976.69 742.833 1966.78 752.583 1953.78 759.25C1940.94 765.75 1925.53 769 1907.53 769H1858.78ZM1882.28 748.5H1905.03C1918.19 748.5 1929.53 746.25 1939.03 741.75C1948.53 737.25 1955.86 730.167 1961.03 720.5C1966.19 710.833 1968.78 698.25 1968.78 682.75V677.75C1968.78 662.75 1966.28 650.667 1961.28 641.5C1956.28 632.167 1949.19 625.333 1940.03 621C1930.86 616.667 1920.03 614.5 1907.53 614.5H1882.28V748.5Z" fill="#E1D6B0"/>
+          <path d="M1628.83 769V594H1651.83L1745.83 730.25V594H1768.83V769H1745.83L1651.83 632.75V769H1628.83Z" fill="#E1D6B0"/>
+          <path d="M1512.72 769V594H1536.22V769H1512.72Z" fill="#E1D6B0"/>
+          <path d="M1255.13 769V594H1279.63L1338.13 705.25L1396.63 594H1420.13V769H1396.63V636.5L1346.38 731.5H1328.88L1278.63 636.5V769H1255.13Z" fill="#E1D6B0"/>
+          <path d="M1045.21 769V594H1106.46C1121.13 594 1133.29 596.333 1142.96 601C1152.79 605.5 1160.21 611.75 1165.21 619.75C1170.21 627.583 1172.71 636.5 1172.71 646.5C1172.71 658.167 1169.21 668.417 1162.21 677.25C1155.38 685.917 1145.21 692 1131.71 695.5L1177.71 769H1149.96L1108.21 698.5H1068.71V769H1045.21ZM1068.71 678.5H1103.96C1120.13 678.5 1131.71 675.583 1138.71 669.75C1145.71 663.75 1149.21 656 1149.21 646.5C1149.21 637 1145.71 629.333 1138.71 623.5C1131.71 617.5 1120.13 614.5 1103.96 614.5H1068.71V678.5Z" fill="#E1D6B0"/>
+          <path d="M852.627 769V594H965.127V614.5H876.127V668.75H957.627V689.25H876.127V748.5H965.127V769H852.627Z" fill="#E1D6B0"/>
+          <path d="M698.348 769V614.5H637.598V594H782.598V614.5H721.848V769H698.348Z" fill="#E1D6B0"/>
+          <path d="M515.127 771.5C501.127 771.5 489.46 769.333 480.127 765C470.96 760.667 463.877 754.833 458.877 747.5C453.877 740 450.544 731.75 448.877 722.75H472.377C474.21 730.417 478.377 737 484.877 742.5C491.377 747.833 501.46 750.5 515.127 750.5C529.127 750.5 539.71 747.833 546.877 742.5C554.21 737.167 557.877 730.583 557.877 722.75C557.877 716.25 556.377 711.083 553.377 707.25C550.377 703.25 545.377 699.917 538.377 697.25C531.544 694.417 522.21 691.667 510.377 689C497.377 686.167 486.71 682.833 478.377 679C470.044 675.167 463.877 670 459.877 663.5C455.877 657 453.877 648.417 453.877 637.75C453.877 629.083 456.294 621.333 461.127 614.5C466.127 607.5 473.21 601.917 482.377 597.75C491.544 593.583 502.46 591.5 515.127 591.5C527.627 591.5 538.044 593.583 546.377 597.75C554.71 601.917 561.21 607.5 565.877 614.5C570.544 621.333 573.627 629.083 575.127 637.75H551.627C549.96 630.75 546.377 624.833 540.877 620C535.544 615 526.96 612.5 515.127 612.5C503.127 612.5 493.794 615 487.127 620C480.627 624.833 477.377 630.75 477.377 637.75C477.377 646.917 480.794 653.667 487.627 658C494.46 662.167 505.377 665.917 520.377 669.25C531.21 671.583 540.46 674.25 548.127 677.25C555.96 680.25 562.294 683.833 567.127 688C572.127 692 575.71 696.833 577.877 702.5C580.21 708.167 581.377 714.917 581.377 722.75C581.377 731.75 578.71 740 573.377 747.5C568.21 754.833 560.71 760.667 550.877 765C541.044 769.333 529.127 771.5 515.127 771.5Z" fill="#E1D6B0"/>
+          <path d="M235.088 769L302.088 594H325.588L392.588 769H367.088L350.338 725.5H276.338L259.588 769H235.088ZM284.088 705H342.588L313.338 624L284.088 705Z" fill="#E1D6B0"/>
+          <path d="M0 769V594H24.5L83 705.25L141.5 594H165V769H141.5V636.5L91.25 731.5H73.75L23.5 636.5V769H0Z" fill="#E1D6B0"/>
+          <path d="M1360.98 984.85H1350.48L1292.43 896.65V984.85H1281.93V880H1292.43L1350.48 968.05V880H1360.98V984.85Z" fill="#E1D6B0"/>
+          <path d="M1175.83 986.1C1166.13 986.1 1157.33 983.85 1149.43 979.35C1141.53 974.75 1135.28 968.4 1130.68 960.3C1126.18 952.1 1123.93 942.85 1123.93 932.55C1123.93 922.25 1126.18 913.05 1130.68 904.95C1135.28 896.75 1141.53 890.4 1149.43 885.9C1157.33 881.3 1166.13 879 1175.83 879C1185.63 879 1194.48 881.3 1202.38 885.9C1210.28 890.4 1216.48 896.75 1220.98 904.95C1225.48 913.05 1227.73 922.25 1227.73 932.55C1227.73 942.85 1225.48 952.1 1220.98 960.3C1216.48 968.4 1210.28 974.75 1202.38 979.35C1194.48 983.85 1185.63 986.1 1175.83 986.1ZM1175.83 976.95C1183.63 976.95 1190.63 975.15 1196.83 971.55C1203.03 967.95 1207.93 962.8 1211.53 956.1C1215.13 949.3 1216.93 941.45 1216.93 932.55C1216.93 923.65 1215.13 915.85 1211.53 909.15C1207.93 902.45 1203.03 897.3 1196.83 893.7C1190.63 890.1 1183.63 888.3 1175.83 888.3C1168.03 888.3 1161.03 890.1 1154.83 893.7C1148.63 897.3 1143.73 902.45 1140.13 909.15C1136.53 915.85 1134.73 923.65 1134.73 932.55C1134.73 941.45 1136.53 949.3 1140.13 956.1C1143.73 962.8 1148.63 967.95 1154.83 971.55C1161.03 975.15 1168.03 976.95 1175.83 976.95Z" fill="#E1D6B0"/>
+          <path d="M968.43 976.3H1006.08V984.85H957.931V880H968.43V976.3Z" fill="#E1D6B0"/>
+          <path d="M866.431 976.3H904.081V984.85H855.931V880H866.431V976.3Z" fill="#E1D6B0"/>
+          <path d="M802.431 880V984.85H791.931V880H802.431Z" fill="#E1D6B0"/>
+          <path d="M1070.43 885V989.85H1059.93V885H1070.43Z" fill="#E1D6B0"/>
+          <path d="M737.45 882V985.5H726.95V902.85L690.05 985.5H682.4L645.5 903.15V985.5H635V882H646.1L686.15 971.7L726.2 882H737.45Z" fill="#E1D6B0"/>
+          <path d="M1450 930H1996V939H1450V930Z" fill="url(#paint1w)"/>
+          <path d="M0 930H546V939H0V930Z" fill="url(#paint2w)"/>
+          <defs>
+            <linearGradient id="paint0w" x1="998" y1="0" x2="998" y2="490.571" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#B17F40"/><stop offset="1" stop-color="#DBAA69"/>
+            </linearGradient>
+            <linearGradient id="paint1w" x1="1450" y1="934.5" x2="1996" y2="934.5" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#B58344"/><stop offset="1" stop-color="#D4A362"/>
+            </linearGradient>
+            <linearGradient id="paint2w" x1="0" y1="934.5" x2="546" y2="934.5" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#B58344"/><stop offset="1" stop-color="#D4A362"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="exclusive-tag">Acceso restringido</div>
+      <h1 class="welcome-title">Este link es exclusivo para personas invitadas personalmente.</h1>
+      <p class="welcome-text">Si estás aquí, alguien del equipo de <strong>Mastermind Million</strong> te invitó directamente. Tómate dos minutos para confirmar tu asistencia y asegurar tu lugar en la cumbre.</p>
+      <button type="button" class="btn btn-primary" id="startBtn">Confirmar mi asistencia</button>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd> para continuar</div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="nombre" data-step="1">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 1 de 8</div>
+      <div class="q-title">¿Cuál es tu nombre completo? <span class="req">*</span></div>
+      <div class="q-sub">Como aparecerá en tu gafete de acceso.</div>
+      <input type="text" class="q-input" id="nombre" placeholder="Escribe tu respuesta aquí" autocomplete="off">
+      <div class="q-error" id="err-nombre">Por favor escribe tu nombre completo.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="email" data-step="2">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 2 de 8</div>
+      <div class="q-title">¿Cuál es tu correo electrónico? <span class="req">*</span></div>
+      <div class="q-sub">Aquí enviaremos los detalles del encuentro.</div>
+      <input type="email" class="q-input" id="email" placeholder="tu@correo.com" autocomplete="off">
+      <div class="q-error" id="err-email">Ingresa un correo válido.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="telefono" data-step="3">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 3 de 8</div>
+      <div class="q-title">¿Cuál es tu WhatsApp? <span class="req">*</span></div>
+      <div class="q-sub">Por aquí te compartiremos recordatorios importantes.</div>
+      <div class="phone-row">
+        <select class="q-select q-code" id="codigoPais">
+          <option value="+57" selected>🇨🇴 +57</option>
+          <option value="+52">🇲🇽 +52</option>
+          <option value="+1">🇺🇸 +1</option>
+          <option value="+51">🇵🇪 +51</option>
+          <option value="+54">🇦🇷 +54</option>
+          <option value="+56">🇨🇱 +56</option>
+          <option value="+507">🇵🇦 +507</option>
+          <option value="+58">🇻🇪 +58</option>
+          <option value="+593">🇪🇨 +593</option>
+          <option value="+34">🇪🇸 +34</option>
+          <option value="otro">🌐 Otro</option>
+        </select>
+        <input type="text" class="q-input q-code-custom" id="codigoPaisOtro" placeholder="+__" inputmode="numeric" style="display:none;">
+        <input type="tel" class="q-input" id="telefono" placeholder="300 000 0000" autocomplete="off">
+      </div>
+      <div class="q-error" id="err-telefono">Ingresa un teléfono válido.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="pais" data-step="4">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 4 de 8</div>
+      <div class="q-title">¿Desde qué país nos visitas? <span class="req">*</span></div>
+      <select class="q-input q-select" id="pais">
+        <option value="" disabled selected>Selecciona tu país</option>
+        <option value="Colombia">🇨🇴 Colombia</option>
+        <option value="México">🇲🇽 México</option>
+        <option value="Estados Unidos">🇺🇸 Estados Unidos</option>
+        <option value="Perú">🇵🇪 Perú</option>
+        <option value="Argentina">🇦🇷 Argentina</option>
+        <option value="Chile">🇨🇱 Chile</option>
+        <option value="Panamá">🇵🇦 Panamá</option>
+        <option value="Venezuela">🇻🇪 Venezuela</option>
+        <option value="Ecuador">🇪🇨 Ecuador</option>
+        <option value="Otro">🌐 Otro</option>
+      </select>
+      <div class="q-conditional" id="paisOtroWrap">
+        <input type="text" class="q-input" id="paisOtro" placeholder="Escribe el nombre de tu país">
+      </div>
+      <div class="q-error" id="err-pais">Selecciona tu país.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="ciudad" data-step="5">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 5 de 8</div>
+      <div class="q-title">¿Y desde qué ciudad? <span class="req">*</span></div>
+      <input type="text" class="q-input" id="ciudad" placeholder="Ej. Ciudad de México" autocomplete="off">
+      <div class="q-error" id="err-ciudad">Indica tu ciudad.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+      <div class="hint-key">Presiona <kbd>Enter ↵</kbd></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="acompanante" data-step="6">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 6 de 8</div>
+      <div class="q-title">¿Vienes con acompañante? <span class="req">*</span></div>
+      <div class="pill-grid" id="acompPills">
+        <label class="pill-opt"><input type="radio" name="acompanante" value="no"><span>No</span></label>
+        <label class="pill-opt"><input type="radio" name="acompanante" value="si"><span>Sí</span></label>
+      </div>
+      <div class="q-conditional" id="acompNombreWrap">
+        <input type="text" class="q-input" id="acompNombre" placeholder="Nombre completo de tu acompañante">
+      </div>
+      <div class="q-error" id="err-acompanante">Selecciona una opción.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="dieta" data-step="7">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 7 de 8</div>
+      <div class="q-title">¿Alguna restricción alimentaria o alergia? <span class="req">*</span></div>
+      <div class="q-sub">Queremos cuidar cada detalle de tu experiencia.</div>
+      <div class="pill-grid" id="dietaPills">
+        <label class="pill-opt"><input type="radio" name="dieta" value="ninguna"><span>Ninguna</span></label>
+        <label class="pill-opt"><input type="radio" name="dieta" value="vegetariano"><span>Vegetariano</span></label>
+        <label class="pill-opt"><input type="radio" name="dieta" value="vegano"><span>Vegano</span></label>
+        <label class="pill-opt"><input type="radio" name="dieta" value="alergia"><span>Tengo alergias</span></label>
+        <label class="pill-opt"><input type="radio" name="dieta" value="otra"><span>Otra restricción</span></label>
+      </div>
+      <div class="q-conditional" id="alergiaDetalleWrap">
+        <textarea class="q-input" id="alergiaDetalle" rows="2" placeholder="Cuéntanos cuál — por tu seguridad queremos prepararnos bien."></textarea>
+      </div>
+      <div class="q-error" id="err-dieta">Selecciona una opción.</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" data-action="next">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="q" data-field="comentarios" data-step="8">
+    <div class="screen-inner">
+      <div class="q-eyebrow">Pregunta 8 de 8</div>
+      <div class="q-title">¿Algo más que debamos saber?</div>
+      <div class="q-sub">Movilidad reducida, requerimientos especiales, etc. (opcional)</div>
+      <textarea class="q-input" id="comentarios" rows="3" placeholder="Escribe aquí, o continúa si no aplica"></textarea>
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" data-action="back">Atrás</button>
+        <button type="button" class="btn btn-primary" id="submitBtn" data-action="submit">Confirmar asistencia</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="screen" data-screen="success">
+    <div class="confetti-container" id="confettiContainer"></div>
+    <div class="screen-inner">
+      <svg class="success-seal" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sealGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#B17F40"/><stop offset="1" stop-color="#E8D9AE"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="46" stroke="url(#sealGrad)" stroke-width="1.5"/>
+        <path d="M50 10 L60 38 L88 50 L60 62 L50 90 L40 62 L12 50 L40 38 Z" fill="url(#sealGrad)" opacity="0.18"/>
+        <path d="M30 56 L42 68 L70 36" stroke="url(#sealGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div class="success-title">Asistencia confirmada</div>
+      <p class="success-text">Gracias por confirmar tu lugar en el Mastermind Million. Te llegará un correo y un mensaje de WhatsApp próximamente con los detalles del encuentro.</p>
+      <p class="success-text" style="margin-top:14px;font-weight:500;color:var(--gold-light);">Nos vemos en CDMX.</p>
+      <div class="ref-code" id="refCode"></div>
+
+      <div class="support-block">
+        <p class="support-text">¿Tienes alguna duda?</p>
+        <a href="https://wa.link/q9pwss" target="_blank" rel="noopener" class="btn btn-support">Contacta a soporte</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const screens = Array.from(document.querySelectorAll('.screen'));
+const progressFill = document.getElementById('progressFill');
+const stepCounter = document.getElementById('stepCounter');
+const logoFixed = document.getElementById('logoFixed');
+const totalQuestions = 8;
+
+let currentIndex = 0;
+let hasSubmitted = false;
+const data = {};
+
+function showScreen(newIndex){
+  const current = screens[currentIndex];
+  const next = screens[newIndex];
+  current.classList.remove('active');
+  current.classList.add('leaving');
+  setTimeout(() => current.classList.remove('leaving'), 460);
+  next.classList.add('active');
+  currentIndex = newIndex;
+  updateProgress();
+  const input = next.querySelector('input[type="text"], input[type="email"], input[type="tel"]');
+  if(input) setTimeout(()=> input.focus(), 200);
+}
+
+function updateProgress(){
+  const screen = screens[currentIndex];
+  const screenType = screen.dataset.screen;
+  if(screenType === 'welcome'){
+    progressFill.style.width = '0%';
+    stepCounter.style.display = 'none';
+    logoFixed.style.display = 'none';
+  } else if(screenType === 'q'){
+    const step = parseInt(screen.dataset.step, 10);
+    progressFill.style.width = (step / totalQuestions * 100) + '%';
+    stepCounter.style.display = 'block';
+    stepCounter.innerHTML = '<span>' + step + '</span> / ' + totalQuestions;
+    logoFixed.style.display = 'block';
+  } else if(screenType === 'success'){
+    progressFill.style.width = '100%';
+    stepCounter.style.display = 'none';
+    logoFixed.style.display = 'block';
+  }
+}
+
+document.getElementById('startBtn').addEventListener('click', () => goNext());
+
+function validateField(field){
+  let valid = true;
+  if(field === 'nombre'){
+    valid = document.getElementById('nombre').value.trim().length > 1;
+  }
+  if(field === 'email'){
+    valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('email').value.trim());
+  }
+  if(field === 'telefono'){
+    valid = document.getElementById('telefono').value.replace(/[^0-9]/g,'').length >= 7;
+  }
+  if(field === 'pais'){
+    const v = document.getElementById('pais').value;
+    if(v === 'Otro'){
+      valid = document.getElementById('paisOtro').value.trim().length > 0;
+    } else {
+      valid = v.trim().length > 0;
+    }
+  }
+  if(field === 'ciudad'){
+    valid = document.getElementById('ciudad').value.trim().length > 0;
+  }
+  if(field === 'acompanante'){
+    const checked = document.querySelector('input[name="acompanante"]:checked');
+    valid = !!checked;
+    if(checked && checked.value === 'si'){
+      valid = document.getElementById('acompNombre').value.trim().length > 0;
+    }
+  }
+  if(field === 'dieta'){
+    valid = !!document.querySelector('input[name="dieta"]:checked');
+  }
+  if(field === 'comentarios'){
+    valid = true;
+  }
+  const errEl = document.getElementById('err-' + field);
+  if(errEl) errEl.classList.toggle('show', !valid);
+  return valid;
+}
+
+function collectCurrentField(){
+  const screen = screens[currentIndex];
+  const field = screen.dataset.field;
+  if(!field) return;
+  if(field === 'dieta'){
+    const checked = document.querySelector('input[name="dieta"]:checked');
+    data.dieta = checked ? checked.value : '';
+    data.alergiaDetalle = document.getElementById('alergiaDetalle').value.trim();
+  } else if(field === 'pais'){
+    const v = document.getElementById('pais').value;
+    data.pais = v === 'Otro' ? document.getElementById('paisOtro').value.trim() : v;
+  } else if(field === 'telefono'){
+    const code = document.getElementById('codigoPais').value;
+    const codePrefix = code === 'otro'
+      ? (document.getElementById('codigoPaisOtro').value.trim() ? document.getElementById('codigoPaisOtro').value.trim() + ' ' : '')
+      : code + ' ';
+    data.telefono = codePrefix + document.getElementById('telefono').value.trim();
+  } else if(field === 'acompanante'){
+    const checked = document.querySelector('input[name="acompanante"]:checked');
+    data.acompanante = checked ? checked.value : '';
+    data.acompananteNombre = checked && checked.value === 'si' ? document.getElementById('acompNombre').value.trim() : '';
+  } else {
+    const el = document.getElementById(field);
+    if(el) data[field] = el.value.trim();
+  }
+}
+
+function goNext(){
+  if(hasSubmitted) return;
+  const screen = screens[currentIndex];
+  const field = screen.dataset.field;
+  if(field){
+    if(!validateField(field)) return;
+    collectCurrentField();
+  }
+  if(screen.dataset.screen === 'q' && parseInt(screen.dataset.step,10) === totalQuestions){
+    hasSubmitted = true;
+    const submitBtn = document.getElementById('submitBtn');
+    if(submitBtn){
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+    }
+    submitForm();
+    return;
+  }
+  if(currentIndex < screens.length - 1){
+    showScreen(currentIndex + 1);
+  }
+}
+
+function goBack(){
+  if(currentIndex > 0){
+    showScreen(currentIndex - 1);
+  }
+}
+
+document.querySelectorAll('[data-action="next"]').forEach(btn => btn.addEventListener('click', goNext));
+document.querySelectorAll('[data-action="back"]').forEach(btn => btn.addEventListener('click', goBack));
+document.getElementById('submitBtn').addEventListener('click', goNext);
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    const screen = screens[currentIndex];
+    if(screen.dataset.screen === 'success') return;
+    const active = document.activeElement;
+    if(active && active.tagName === 'TEXTAREA' && e.shiftKey) return;
+    e.preventDefault();
+    goNext();
+  }
+});
+
+document.querySelectorAll('input[name="dieta"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const wrap = document.getElementById('alergiaDetalleWrap');
+    if(r.value === 'alergia' || r.value === 'otra'){
+      wrap.classList.add('open');
+    } else {
+      wrap.classList.remove('open');
+    }
+    document.getElementById('err-dieta').classList.remove('show');
+  });
+});
+
+document.querySelectorAll('input[name="acompanante"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const wrap = document.getElementById('acompNombreWrap');
+    if(r.value === 'si'){
+      wrap.classList.add('open');
+      setTimeout(()=> document.getElementById('acompNombre').focus(), 350);
+    } else {
+      wrap.classList.remove('open');
+    }
+    document.getElementById('err-acompanante').classList.remove('show');
+  });
+});
+
+document.getElementById('codigoPais').addEventListener('change', () => {
+  const code = document.getElementById('codigoPais').value;
+  const customInput = document.getElementById('codigoPaisOtro');
+  if(code === 'otro'){
+    customInput.style.display = '';
+    setTimeout(()=> customInput.focus(), 150);
+  } else {
+    customInput.style.display = 'none';
+  }
+});
+
+document.getElementById('pais').addEventListener('change', () => {
+  const wrap = document.getElementById('paisOtroWrap');
+  const v = document.getElementById('pais').value;
+  if(v === 'Otro'){
+    wrap.classList.add('open');
+    setTimeout(()=> document.getElementById('paisOtro').focus(), 350);
+  } else {
+    wrap.classList.remove('open');
+  }
+  document.getElementById('err-pais').classList.remove('show');
+});
+
+function genRef(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let ref = 'MM-';
+  for(let i=0;i<6;i++) ref += chars[Math.floor(Math.random()*chars.length)];
+  return ref;
+}
+
+const SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbz71zLD1URQ8OhPIhGKcHCcC59QJKQl246tchAS2BKcyuGQahODqSR6JXcN0fxTCxrY/exec';
+
+async function submitForm(){
+  data.fecha = new Date().toISOString();
+  const ref = genRef();
+  data.ref = ref;
+
+  try{
+    if(window.storage){
+      await window.storage.set('rsvp:' + ref, JSON.stringify(data), true);
+    }
+  } catch(err){
+    console.error('No se pudo guardar el registro local', err);
+  }
+
+  try{
+    await fetch(SHEETS_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+  } catch(err){
+    console.error('No se pudo enviar a Google Sheets', err);
+  }
+
+  document.getElementById('refCode').textContent = 'Referencia ' + ref;
+  showScreen(screens.length - 1);
+  launchConfetti();
+}
+
+function launchConfetti(){
+  const container = document.getElementById('confettiContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  const colors = ['#D4A362', '#B17F40', '#E8D9AE', '#F5E6C8'];
+  const isMobile = window.matchMedia('(max-width: 520px)').matches;
+  const total = isMobile ? 40 : 70;
+  for(let i = 0; i < total; i++){
+    const piece = document.createElement('div');
+    const isRibbon = Math.random() > 0.5;
+    piece.className = 'confetti-piece' + (isRibbon ? ' ribbon' : '');
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.6;
+    const duration = 2.6 + Math.random() * 1.8;
+    const drift = (Math.random() * 160 - 80) + 'px';
+    const spin = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 360) + 'deg';
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.left = left + '%';
+    piece.style.background = color;
+    piece.style.animationDelay = delay + 's';
+    piece.style.animationDuration = duration + 's';
+    piece.style.setProperty('--drift', drift);
+    piece.style.setProperty('--spin', spin);
+    container.appendChild(piece);
+  }
+  setTimeout(() => { container.innerHTML = ''; }, 5200);
+}
+
+updateProgress();
+</script>
+</body>
+</html>
